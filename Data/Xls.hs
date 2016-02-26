@@ -3,40 +3,18 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RankNTypes #-}
 
---{-# LANGUAGE DeriveDataTypeable #-}
---{-# LANGUAGE FlexibleContexts #-}
---{-# LANGUAGE FlexibleInstances #-}
---{-# LANGUAGE MultiParamTypeClasses #-}
---{-# LANGUAGE TypeFamilies #-}
-
 module Data.Xls (decodeXLS) where
 
---import Prelude hiding (pi)
-
-import Foreign.C
-import Foreign.Ptr
---import Foreign.ForeignPtr
-#if MIN_VERSION_base(4,7,0)
---import Foreign.ForeignPtr.Unsafe
-#endif
---import Foreign.Marshal.Alloc
-
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
-import Control.Exception (throwIO, Exception)
---import Control.Monad
-import Control.Monad.IO.Class
-import Control.Monad.Trans.Resource
-import Data.Conduit hiding (Source, Sink, Conduit)
-import Data.Data
-import Data.Int
-
---import Data.ByteString (ByteString, packCStringLen)
---import qualified Data.ByteString
---import qualified Data.ByteString.Char8 as B8
---import qualified Data.ByteString.Internal as B
---import qualified Data.ByteString.Unsafe as BU
+import           Control.Exception            (Exception, throwIO)
+import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Resource
+import           Data.Conduit                 hiding (Conduit, Sink, Source)
+import           Data.Data
+import           Data.Int
+import           Data.Maybe                   (catMaybes, fromJust, isJust)
+import           Foreign.C
+import           Foreign.Ptr
+import           Text.Printf
 
 -- XXX do we need to include the header file?
 -- can it do prototype checking?
@@ -69,25 +47,13 @@ type XLSCell = Ptr XLSCellStruct
 
 CCALL(xls_cell, XLSWorksheet -> Int16 -> Int16 -> IO XLSCell)
 
-CCALL(xls_cell_type,      XLSCell -> IO Int16 -- Int16)
-CCALL(xls_cell_strval,    XLSCell -> IO CString)
-CCALL(xls_cell_intval,    XLSCell -> IO Int32 -- Int32)
-CCALL(xls_cell_floatval,  XLSCell -> IO CDouble)
-CCALL(xls_cell_colspan,   XLSCell -> IO Int16 -- Int16)
-CCALL(xls_cell_rowspan,   XLSCell -> IO Int16 -- Int16)
-CCALL(xls_cell_hidden,    XLSCell -> IO Int8 -- Int8)
-
-{-
-data XLSCellStruct = XLSCellStruct {
-    xlsCellType :: Int16,
-    xlsCellStrVal :: CString,
-    xlsCellIntVal :: Int32,
-    xlsCellFloatVal :: CDouble,
-    xlsCellColSpan :: Int16,
-    xlsCellRowSpan :: Int16,
-    xlsCellHidden :: Int8,
-}
--}
+CCALL(xls_cell_type,            XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_strval,          XLSCell -> IO CString)
+CCALL(xls_cell_formulatype,     XLSCell -> IO Int32 -- Int32)
+CCALL(xls_cell_numval,          XLSCell -> IO CDouble)
+CCALL(xls_cell_colspan,         XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_rowspan,         XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_hidden,          XLSCell -> IO Int8 -- Int8)
 
 data XLSException =
       XLSFileNotFound String
@@ -96,7 +62,7 @@ data XLSException =
 
 instance Exception XLSException
 
-decodeXLS :: MonadResource m => FilePath -> Producer m String
+decodeXLS :: MonadResource m => FilePath -> Producer m [String]
 decodeXLS file =
     bracketP alloc cleanup decodeWorkSheets
     where
@@ -117,7 +83,7 @@ decodeXLS file =
 
 decodeOneWorkSheet
     :: MonadResource m
-    => FilePath -> XLSWorkbook -> CInt -> Producer m String
+    => FilePath -> XLSWorkbook -> CInt -> Producer m [String]
 decodeOneWorkSheet file pWB index =
     bracketP alloc cleanup decodeWS
     where
@@ -132,29 +98,81 @@ decodeOneWorkSheet file pWB index =
 
         cleanup = c_xls_close_WS
 
-        decodeWS = decodeCells
+        decodeWS = decodeRows
 
-decodeCells :: MonadResource m => XLSWorksheet -> Producer m String
-decodeCells pWS = do
+decodeRows :: MonadResource m => XLSWorksheet -> Producer m [String]
+decodeRows pWS = do
     rows <- liftIO $ c_xls_ws_rowcount pWS
     cols <- liftIO $ c_xls_ws_colcount pWS
-    let str = "Sheet has " ++ show rows ++ " rows and "
-              ++ show cols ++ " columns."
-    yield str
-    mapM_ decodeOneCell [(x, y, c_xls_cell pWS x y) | x <- [0 .. rows - 1], y <- [0 .. cols - 1]]
+    mapM_ (decodeOneRow pWS cols) [r | r <- [0 .. rows - 1]]
 
-decodeOneCell (x, y, pCell) = do
-    ptr <- liftIO pCell
-    value <- liftIO $ cellvalue ptr
-    yield $ show (x, y) ++ " -> " ++ value
+decodeOneRow
+    :: MonadResource m
+    => XLSWorksheet -> Int16 -> Int16 -> Producer m [String]
+decodeOneRow pWS cols rowindex =
+    mapM (liftIO . (c_xls_cell pWS rowindex)) [0 .. cols - 1]
+        >>= mapM (liftIO. decodeOneCell)
+        >>= yield . catMaybes
 
-    where cellvalue ptr =
-            if ptr == nullPtr
-            then return "null"
+data CellType = Numerical | Formula | Str | Other
+
+decodeOneCell :: XLSCell -> IO (Maybe String)
+decodeOneCell cellPtr = do
+    nil <- isNullCell cellPtr
+    if nil then
+        return Nothing
+    else cellValue cellPtr >>= return . Just
+
+    where
+        isNullCell ptr =
+            if ptr == nullPtr then
+                return True
             else do
                 hidden <- c_xls_cell_hidden ptr
-                if hidden /= 0
-                then return "hidden"
-                else do
-                    typ <- c_xls_cell_type ptr
-                    return $ show typ
+                if hidden /= 0 then
+                    return True
+                else
+                    return False
+
+        cellValue ptr = do
+            typ     <- c_xls_cell_type ptr
+            numval  <- c_xls_cell_numval ptr
+            ftype   <- c_xls_cell_formulatype ptr
+            --rowspan <- c_xls_cell_rowspan ptr
+            --colspan <- c_xls_cell_colspan ptr
+            pStr    <- c_xls_cell_strval ptr
+            strval  <-
+                if pStr /= nullPtr then
+                    peekCString pStr >>= return . Just
+                else
+                    return Nothing
+
+            return $ case cellType typ ftype strval of
+                Numerical   -> outputNum numval
+                Formula     -> decodeFormula strval numval
+                Str         -> fromJust strval
+                Other       -> "" -- we don't decode anything else
+
+        decodeFormula str numval =
+            case str of
+                Just "bool"  -> outputBool numval
+                Just "error" -> "*error*"
+                Just x       -> x
+                Nothing      -> "" -- is it possible?
+
+        outputNum  d = printf "%.15g" (uncurry encodeFloat (decodeFloat d)
+                                       :: Double)
+        outputBool d = if d == 0 then "false" else "true"
+
+        cellType t ftype strval =
+            if t == 0x27e || t == 0x0BD || t == 0x203 then
+                Numerical
+            else if t == 0x06 then
+                if ftype == 0 then
+                    Numerical
+                else
+                    Formula
+            else if isJust strval then
+                Str
+            else
+                Other

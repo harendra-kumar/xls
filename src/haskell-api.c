@@ -25,11 +25,11 @@ BYTE * xls_cell_strval (xlsCell *cell) {
     return cell->str;
 }
 
-int32_t xls_cell_intval (xlsCell *cell) {
+int32_t xls_cell_formulatype (xlsCell *cell) {
     return cell->l;
 }
 
-double xls_cell_floatval (xlsCell *cell) {
+double xls_cell_numval (xlsCell *cell) {
     return cell->d;
 }
 
