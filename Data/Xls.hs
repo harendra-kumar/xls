@@ -1,0 +1,160 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE RankNTypes #-}
+
+--{-# LANGUAGE DeriveDataTypeable #-}
+--{-# LANGUAGE FlexibleContexts #-}
+--{-# LANGUAGE FlexibleInstances #-}
+--{-# LANGUAGE MultiParamTypeClasses #-}
+--{-# LANGUAGE TypeFamilies #-}
+
+module Data.Xls (decodeXLS) where
+
+--import Prelude hiding (pi)
+
+import Foreign.C
+import Foreign.Ptr
+--import Foreign.ForeignPtr
+#if MIN_VERSION_base(4,7,0)
+--import Foreign.ForeignPtr.Unsafe
+#endif
+--import Foreign.Marshal.Alloc
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative
+#endif
+import Control.Exception (throwIO, Exception)
+--import Control.Monad
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Resource
+import Data.Conduit hiding (Source, Sink, Conduit)
+import Data.Data
+import Data.Int
+
+--import Data.ByteString (ByteString, packCStringLen)
+--import qualified Data.ByteString
+--import qualified Data.ByteString.Char8 as B8
+--import qualified Data.ByteString.Internal as B
+--import qualified Data.ByteString.Unsafe as BU
+
+-- XXX do we need to include the header file?
+-- can it do prototype checking?
+#define CCALL(name,signature) \
+foreign import ccall unsafe #name \
+    c_##name :: signature
+
+-- Workbook accessor functions
+data XLSWorkbookStruct
+type XLSWorkbook = Ptr XLSWorkbookStruct
+
+CCALL(xls_open,          CString -> CString -> IO XLSWorkbook)
+CCALL(xls_wb_sheetcount, XLSWorkbook -> IO CInt -- Int32)
+CCALL(xls_close_WB,      XLSWorkbook -> IO ())
+
+-- Worksheet accessor functions
+data XLSWorksheetStruct
+type XLSWorksheet = Ptr XLSWorksheetStruct
+
+CCALL(xls_getWorkSheet, XLSWorkbook -> CInt -> IO XLSWorksheet)
+
+CCALL(xls_parseWorkSheet, XLSWorksheet -> IO ())
+CCALL(xls_ws_rowcount,    XLSWorksheet -> IO Int16 -- Int16)
+CCALL(xls_ws_colcount,    XLSWorksheet -> IO Int16 -- Int16)
+CCALL(xls_close_WS,       XLSWorksheet -> IO ())
+
+-- Cell accessor functions
+data XLSCellStruct
+type XLSCell = Ptr XLSCellStruct
+
+CCALL(xls_cell, XLSWorksheet -> Int16 -> Int16 -> IO XLSCell)
+
+CCALL(xls_cell_type,      XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_strval,    XLSCell -> IO CString)
+CCALL(xls_cell_intval,    XLSCell -> IO Int32 -- Int32)
+CCALL(xls_cell_floatval,  XLSCell -> IO CDouble)
+CCALL(xls_cell_colspan,   XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_rowspan,   XLSCell -> IO Int16 -- Int16)
+CCALL(xls_cell_hidden,    XLSCell -> IO Int8 -- Int8)
+
+{-
+data XLSCellStruct = XLSCellStruct {
+    xlsCellType :: Int16,
+    xlsCellStrVal :: CString,
+    xlsCellIntVal :: Int32,
+    xlsCellFloatVal :: CDouble,
+    xlsCellColSpan :: Int16,
+    xlsCellRowSpan :: Int16,
+    xlsCellHidden :: Int8,
+}
+-}
+
+data XLSException =
+      XLSFileNotFound String
+    | XLSParseError String
+    deriving (Show, Typeable)
+
+instance Exception XLSException
+
+decodeXLS :: MonadResource m => FilePath -> Producer m String
+decodeXLS file =
+    bracketP alloc cleanup decodeWorkSheets
+    where
+        alloc = do
+            file' <- newCString file
+            pWB <- newCString "UTF-8" >>= c_xls_open file'
+            if pWB == nullPtr then
+                throwIO $ XLSFileNotFound
+                        $ "XLS file " ++ file ++ " not found."
+            else
+                return pWB
+
+        cleanup = c_xls_close_WB
+
+        decodeWorkSheets pWB = do
+            count <- liftIO $ c_xls_wb_sheetcount pWB
+            mapM_ (decodeOneWorkSheet file pWB) [0 .. count - 1]
+
+decodeOneWorkSheet
+    :: MonadResource m
+    => FilePath -> XLSWorkbook -> CInt -> Producer m String
+decodeOneWorkSheet file pWB index =
+    bracketP alloc cleanup decodeWS
+    where
+        alloc = do
+            pWS <- c_xls_getWorkSheet pWB index
+            if pWS == nullPtr then
+                throwIO $ XLSParseError
+                        $ "XLS file " ++ file ++ " could not be parsed."
+            else do
+              c_xls_parseWorkSheet pWS
+              return pWS
+
+        cleanup = c_xls_close_WS
+
+        decodeWS = decodeCells
+
+decodeCells :: MonadResource m => XLSWorksheet -> Producer m String
+decodeCells pWS = do
+    rows <- liftIO $ c_xls_ws_rowcount pWS
+    cols <- liftIO $ c_xls_ws_colcount pWS
+    let str = "Sheet has " ++ show rows ++ " rows and "
+              ++ show cols ++ " columns."
+    yield str
+    mapM_ decodeOneCell [(x, y, c_xls_cell pWS x y) | x <- [0 .. rows - 1], y <- [0 .. cols - 1]]
+
+decodeOneCell (x, y, pCell) = do
+    ptr <- liftIO pCell
+    value <- liftIO $ cellvalue ptr
+    yield $ show (x, y) ++ " -> " ++ value
+
+    where cellvalue ptr =
+            if ptr == nullPtr
+            then return "null"
+            else do
+                hidden <- c_xls_cell_hidden ptr
+                if hidden /= 0
+                then return "hidden"
+                else do
+                    typ <- c_xls_cell_type ptr
+                    return $ show typ

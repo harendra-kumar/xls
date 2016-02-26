@@ -1,0 +1,52 @@
+name:                xls
+version:             0.1.0.0
+synopsis:            Parse and render Microsoft xls format (BIFF8/Excel 97-2004)
+description:         Please see README.md
+homepage:            http://github.com/harendra-kumar/xls
+license:             BSD3
+license-file:        LICENSE
+author:              Harendra Kumar, TBD
+maintainer:          harendra.kumar@gmail.com
+category:            Codec,Data,Spreadsheet
+stability:           Experimental
+
+build-type:          Simple
+cabal-version:       >=1.10
+
+-- extra-source-files:
+
+library
+  default-language:    Haskell2010
+  ghc-options:         -Wall -pgmP cpp
+  cpp-options:         -DHAVE_CONFIG_H
+  cc-options:          -std=gnu99
+
+  exposed-modules:     Data.Xls
+  build-depends:       base >= 4 && < 5
+                     , conduit >= 1.1.0 && < 1.3
+                     , filepath
+                     , resourcet >= 0.3 && < 1.2
+                     , transformers >= 0.1
+
+  c-sources:           src/haskell-api.c,
+                       libxls/libxls/src/xlstool.c,
+                       libxls/libxls/src/endian.c,
+                       libxls/libxls/src/ole.c,
+                       libxls/libxls/src/xls.c
+
+  include-dirs:        libxls/libxls,
+                       libxls/libxls/include
+
+-- add xls2csv executable
+
+test-suite xls-test
+  default-language:    Haskell2010
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base, xls
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+
+source-repository head
+  type:     git
+  location: https://github.com/harendra-kumar/freexl
