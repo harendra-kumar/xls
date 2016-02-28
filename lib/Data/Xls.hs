@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -pgmP cpp #-}
+
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
