@@ -1,14 +1,14 @@
 name:                xls
 version:             0.1.0.0
-synopsis:            Parse Microsoft xls format (BIFF/Excel 97-2004)
-description:         Please see README.md
+synopsis:            Parse Microsoft Excel xls files (BIFF/Excel 97-2004)
+description:         This is a Haskell library to parse Microsoft Excel workbook files. It parses the xls file format (extension `.xls`) more specifically known as `BIFF/Excel 97-2004`. . It provides a Conduit based streaming API. See the haddock documentation for the API details. . The library is based on the C library [libxls](http://libxls.sourceforge.net/).
 homepage:            http://github.com/harendra-kumar/xls
 license:             BSD3
 license-file:        LICENSE
-author:              Harendra Kumar, TBD
+author:              Harendra Kumar
 maintainer:          harendra.kumar@gmail.com
-category:            Codec,Data,Spreadsheet
-copyright:           2016 Harendra Kumar
+category:            Codec,Data,Parser,Spreadsheet
+copyright:           2016 Harendra Kumar, 2004-2013 Authors of libxls
 stability:           Experimental
 
 build-type:          Simple
