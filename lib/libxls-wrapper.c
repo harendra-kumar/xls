@@ -4,14 +4,14 @@ DWORD xls_wb_sheetcount (xlsWorkBook* pWB) {
     return pWB->sheets.count;
 }
 
-/*
- * The library seems to treat lastrow/lastcol as indexes but it seems they are
- * counts because the last index always turns out to return a null cell
- */
-
 WORD xls_ws_rowcount (xlsWorkSheet* pWS) {
-    return pWS->rows.lastrow;
+    return pWS->rows.lastrow + 1;
 }
+
+/*
+ * The library seems to treat lastcol as index but it seems like it is a count
+ * instead because the last column index always turns out to return a null cell
+ */
 
 WORD xls_ws_colcount (xlsWorkSheet* pWS) {
     return pWS->rows.lastcol;
