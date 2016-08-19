@@ -5,4 +5,6 @@ the xls file format (extension `.xls`) more specifically known as
 It provides a Conduit based streaming API. See the haddock documentation
 for the API details.
 
+It also provides a utility `xls2csv` to convert xls spreadsheets to csv.
+
 The library is based on the C library [libxls](http://libxls.sourceforge.net/).
