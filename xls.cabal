@@ -8,6 +8,7 @@ license-file:        LICENSE
 author:              Harendra Kumar, TBD
 maintainer:          harendra.kumar@gmail.com
 category:            Codec,Data,Spreadsheet
+copyright:           2016 Harendra Kumar
 stability:           Experimental
 
 build-type:          Simple
@@ -50,7 +51,7 @@ executable xls2csv
                       , getopt-generics
                       , xls
 
-test-suite xls-test
+test-suite test
   default-language:    Haskell2010
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
