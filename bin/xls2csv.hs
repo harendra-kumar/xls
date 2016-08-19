@@ -20,4 +20,4 @@ sink = CL.mapM_ $ liftIO . putStrLn . intercalate separator
 main = withCli run
 
 run :: String -> IO ()
-run file = runResourceT $ decodeXLS file $$ sink
+run file = runResourceT $ decodeXls file $$ sink

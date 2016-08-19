@@ -16,7 +16,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.Xls (decodeXLS, XLSException(..)) where
+module Data.Xls (decodeXls, XlsException(..)) where
 
 import           Control.Exception            (Exception, throwIO)
 import           Control.Monad.IO.Class
@@ -68,12 +68,12 @@ CCALL(xls_cell_colspan,         XLSCell -> IO Int16 -- Int16)
 CCALL(xls_cell_rowspan,         XLSCell -> IO Int16 -- Int16)
 CCALL(xls_cell_hidden,          XLSCell -> IO Int8 -- Int8)
 
-data XLSException =
-      XLSFileNotFound String
-    | XLSParseError String
+data XlsException =
+      XlsFileNotFound String
+    | XlsParseError String
     deriving (Show, Typeable)
 
-instance Exception XLSException
+instance Exception XlsException
 
 -- | Parse a Microsoft excel xls workbook file into a Conduit yielding
 -- rows in a worksheet. Each row represented by a list of Strings, each String
@@ -82,17 +82,17 @@ instance Exception XLSException
 -- Currently there is no separation of worksheets, all worksheets in a
 -- workbook get concatenated.
 --
--- Throws 'XLSException'
+-- Throws 'XlsException'
 --
-decodeXLS :: MonadResource m => FilePath -> Producer m [String]
-decodeXLS file =
+decodeXls :: MonadResource m => FilePath -> Producer m [String]
+decodeXls file =
     bracketP alloc cleanup decodeWorkSheets
     where
         alloc = do
             file' <- newCString file
             pWB <- newCString "UTF-8" >>= c_xls_open file'
             if pWB == nullPtr then
-                throwIO $ XLSFileNotFound
+                throwIO $ XlsFileNotFound
                         $ "XLS file " ++ file ++ " not found."
             else
                 return pWB
@@ -112,7 +112,7 @@ decodeOneWorkSheet file pWB index =
         alloc = do
             pWS <- c_xls_getWorkSheet pWB index
             if pWS == nullPtr then
-                throwIO $ XLSParseError
+                throwIO $ XlsParseError
                         $ "XLS file " ++ file ++ " could not be parsed."
             else do
               c_xls_parseWorkSheet pWS
