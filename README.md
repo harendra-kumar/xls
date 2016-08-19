@@ -8,3 +8,5 @@ for the API details.
 It also provides a utility `xls2csv` to convert xls spreadsheets to csv.
 
 The library is based on the C library [libxls](http://libxls.sourceforge.net/).
+The version of libxls used in this library is cloned from
+https://github.com/svn2github/libxls.
