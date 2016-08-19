@@ -7,7 +7,7 @@
 -- Stability   : experimental
 -- Portability : GHC
 --
--- Parser for Microsoft excel xls files
+-- Parse Microsoft excel spreadsheet xls file (format BIFF/Excel 97-2004).
 --
 {-# OPTIONS_GHC -pgmP cpp #-}
 
@@ -16,7 +16,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Data.Xls (decodeXLS) where
+module Data.Xls (decodeXLS, XLSException(..)) where
 
 import           Control.Exception            (Exception, throwIO)
 import           Control.Monad.IO.Class
@@ -75,6 +75,15 @@ data XLSException =
 
 instance Exception XLSException
 
+-- | Parse a Microsoft excel xls workbook file into a Conduit yielding
+-- rows in a worksheet. Each row represented by a list of Strings, each String
+-- representing an individual cell.
+--
+-- Currently there is no separation of worksheets, all worksheets in a
+-- workbook get concatenated.
+--
+-- Throws 'XLSException'
+--
 decodeXLS :: MonadResource m => FilePath -> Producer m [String]
 decodeXLS file =
     bracketP alloc cleanup decodeWorkSheets
