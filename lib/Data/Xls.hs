@@ -1,3 +1,14 @@
+-- |
+-- Module      : Data.Xls
+-- Copyright   : (c) 2016 Harendra Kumar
+--
+-- License     : BSD-style
+-- Maintainer  : harendra.kumar@gmail.com
+-- Stability   : experimental
+-- Portability : GHC
+--
+-- Parser for Microsoft excel xls files
+--
 {-# OPTIONS_GHC -pgmP cpp #-}
 
 {-# LANGUAGE CPP #-}
