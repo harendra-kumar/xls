@@ -1360,11 +1360,13 @@ xlsWorkSheet * xls_getWorkSheet(xlsWorkBook* pWB,int num)
     xlsWorkSheet * pWS;
     verbose ("xls_getWorkSheet");
     pWS=(xlsWorkSheet *)calloc(1, sizeof(xlsWorkSheet));
-    pWS->filepos=pWB->sheets.sheet[num].filepos;
-    pWS->workbook=pWB;
-    pWS->rows.lastcol=0;
-    pWS->rows.lastrow=0;
-    pWS->colinfo.count=0;
+    if (pWS != NULL) {
+      pWS->filepos=pWB->sheets.sheet[num].filepos;
+      pWS->workbook=pWB;
+      pWS->rows.lastcol=0;
+      pWS->rows.lastrow=0;
+      pWS->colinfo.count=0;
+    }
     return(pWS);
 }
 
@@ -1375,6 +1377,10 @@ xlsWorkBook* xls_open(const char *file,const char* charset)
 
     pWB=(xlsWorkBook*)calloc(1, sizeof(xlsWorkBook));
     verbose ("xls_open");
+
+    if (pWB == NULL) {
+      return NULL;
+    }
 
     // open excel file
     if (!(ole=ole2_open((BYTE *)file)))
