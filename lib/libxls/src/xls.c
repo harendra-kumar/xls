@@ -50,7 +50,7 @@
 #define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define DEBUG_DRAWINGS
+/* #define DEBUG_DRAWINGS */
 int xls_debug = 0;
 
 static double NumFromRk(DWORD_UA drk);
