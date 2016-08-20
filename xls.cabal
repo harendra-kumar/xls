@@ -26,7 +26,11 @@ cabal-version:       >=1.10
 library
   default-language:    Haskell2010
   ghc-options:         -Wall
-  cc-options:          -std=c99
+
+  -- c99 also works but clang and gcc both support gnu99. We will have to use
+  -- a configure script if better portability is required.
+  -- _GNU_SOURCE is required to enable asprintf in glibc
+  cc-options:          -std=gnu99 -D_GNU_SOURCE
 
   hs-source-dirs:      lib
   exposed-modules:     Data.Xls

@@ -64,8 +64,8 @@ CCALL(xls_cell_type,            XLSCell -> IO Int16 -- Int16)
 CCALL(xls_cell_strval,          XLSCell -> IO CString)
 CCALL(xls_cell_formulatype,     XLSCell -> IO Int32 -- Int32)
 CCALL(xls_cell_numval,          XLSCell -> IO CDouble)
-CCALL(xls_cell_colspan,         XLSCell -> IO Int16 -- Int16)
-CCALL(xls_cell_rowspan,         XLSCell -> IO Int16 -- Int16)
+-- CCALL(xls_cell_colspan,         XLSCell -> IO Int16 -- Int16)
+-- CCALL(xls_cell_rowspan,         XLSCell -> IO Int16 -- Int16)
 CCALL(xls_cell_hidden,          XLSCell -> IO Int8 -- Int8)
 
 data XlsException =
