@@ -26,10 +26,7 @@ cabal-version:       >=1.10
 library
   default-language:    Haskell2010
   ghc-options:         -Wall
-  -- XXX remove dependency on configure
-  cpp-options:         -DHAVE_CONFIG_H
-  -- XXX make it portable
-  cc-options:          -std=gnu99
+  cc-options:          -std=c99
 
   hs-source-dirs:      lib
   exposed-modules:     Data.Xls
@@ -40,13 +37,13 @@ library
                      , transformers >= 0.1
 
   c-sources:           lib/libxls-wrapper.c,
-                       lib/libxls/libxls/src/xlstool.c,
-                       lib/libxls/libxls/src/endian.c,
-                       lib/libxls/libxls/src/ole.c,
-                       lib/libxls/libxls/src/xls.c
+                       lib/libxls/src/xlstool.c,
+                       lib/libxls/src/endian.c,
+                       lib/libxls/src/ole.c,
+                       lib/libxls/src/xls.c
 
-  include-dirs:        lib/libxls/libxls,
-                       lib/libxls/libxls/include
+  include-dirs:        lib/libxls/config,
+                       lib/libxls/include
 
 executable xls2csv
   default-language:    Haskell2010
