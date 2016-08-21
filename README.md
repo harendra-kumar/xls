@@ -9,7 +9,8 @@ Could be useful for mining data from old Microsoft Excel spreadsheets.
 Note: This is not a released package. The API is not stable and might
 change freely in future updates.
 
-It provides a Conduit based streaming API. See the haddock documentation
+It provides a Conduit based streaming API. See the [haddock
+documentation](https://rawgit.com/harendra-kumar/xls/master/doc/index.html)
 for the API details.
 
 It also provides a utility `xls2csv` to convert xls spreadsheets to csv. The
