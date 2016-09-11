@@ -15,6 +15,9 @@
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RankNTypes #-}
+#if __GLASGOW_HASKELL__ < 7100
+{-# LANGUAGE DeriveDataTypeable #-}
+#endif
 
 module Data.Xls (decodeXls, XlsException(..)) where
 
@@ -29,8 +32,6 @@ import           Foreign.C
 import           Foreign.Ptr
 import           Text.Printf
 
--- XXX do we need to include the header file?
--- can it do prototype checking?
 #define CCALL(name,signature) \
 foreign import ccall unsafe #name \
     c_##name :: signature
