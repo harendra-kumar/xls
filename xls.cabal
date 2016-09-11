@@ -1,5 +1,5 @@
 name:                xls
-version:             0.1
+version:             0.1.0
 synopsis:            Parse Microsoft Excel xls files (BIFF/Excel 97-2004)
 description:  This is a Haskell library to parse Microsoft Excel spreadsheet
  files. It parses the xls file format (extension '.xls') more specifically
