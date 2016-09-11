@@ -27,6 +27,9 @@ extra-source-files:
     README.md
     stack.yaml
     stack-7.8.yaml
+    lib/libxls/config/*.h
+    lib/libxls/include/libxls/*.h
+    lib/libxls/include/libxls/*.c.h
 
 library
   default-language:    Haskell2010
