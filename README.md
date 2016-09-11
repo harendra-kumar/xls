@@ -1,4 +1,7 @@
 ## Haskell xls Parsing
+
+[![Build Status](https://travis-ci.org/harendra-kumar/xls.svg?branch=master)](https://travis-ci.org/harendra-kumar/xls)
+
 This is a Haskell library to parse Microsoft Excel spreadsheet files. It parses
 the xls file format (extension `.xls`) more specifically known as
 `BIFF/Excel 97-2004`.
