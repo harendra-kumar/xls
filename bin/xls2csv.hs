@@ -11,13 +11,10 @@ import           WithCli
 
 -- TODO need to escape the separator and the escaping quotes themselves
 
-separator :: String
-separator = ","
+xlsToCSV :: String -> IO ()
+xlsToCSV file =
+      runResourceT
+    $ decodeXls file
+    $$ CL.mapM_ (liftIO . putStrLn . intercalate ",")
 
-sink :: MonadResource m => Sink [String] m ()
-sink = CL.mapM_ $ liftIO . putStrLn . intercalate separator
-
-main = withCli run
-
-run :: String -> IO ()
-run file = runResourceT $ decodeXls file $$ sink
+main = withCli xlsToCSV

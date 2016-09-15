@@ -2,22 +2,28 @@
 
 [![Build Status](https://travis-ci.org/harendra-kumar/xls.svg?branch=master)](https://travis-ci.org/harendra-kumar/xls)
 
-This is a Haskell library to parse Microsoft Excel spreadsheet files. It parses
-the xls file format (extension `.xls`) more specifically known as
+`xls` is a Haskell library to parse Microsoft Excel spreadsheet files. It
+parses the xls file format (extension `.xls`) more specifically known as
 `BIFF/Excel 97-2004`.
 
-Could be useful for mining data from old Microsoft Excel spreadsheets.
+It can be useful for mining data from old Microsoft Excel spreadsheets.
 
 ## API
-Note: This is not a released package. The API is not stable and might
-change freely in future updates.
+Use `decodeXls` to get a streaming Conduit. For example to convert an
+xls file to comma separated csv:
 
-It provides a Conduit based streaming API. See the [haddock
+```haskell
+xlsToCSV :: String -> IO ()
+xlsToCSV file =
+      runResourceT
+    $ decodeXls file
+    $$ CL.mapM_ (liftIO . putStrLn . intercalate ",")
+```
+
+An `xls2csv` utility is shipped with the package.
+See the [haddock
 documentation](https://rawgit.com/harendra-kumar/xls/master/doc/index.html)
 for the API details.
-
-It also provides a utility `xls2csv` to convert xls spreadsheets to csv. The
-utility also serves as an example of how to use the library.
 
 ## Under the hood
 The library is based on the C library libxls, see
@@ -55,6 +61,5 @@ Others:
 * ParseExcel
 
 ## Contributing
-I wrote this for a specific use case to begin with. I am not actively focused
-on this but if you would like to have something changed or added please go
-ahead, raise an issue or send a pull request.
+Welcome! If you would like to have something changed or added go ahead,
+raise an issue or send a pull request.
