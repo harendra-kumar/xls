@@ -65,4 +65,4 @@ script:
       $(cabal_env CABAL_TEST_INSTALL=y)
       $(cabal_env CABAL_NO_SANDBOX=y)
       $(cabal_env CABAL_HACKAGE_MIRROR=hackage.haskell.org:http://hackage.fpcomplete.com)
-      /bin/bash <($CURL -sL $(pkg_sanity e912eac2ee7fc3dbf492f5e2d60db9f4425fbfa2))
+      /bin/bash <($CURL -sL $(pkg_sanity a29ed5335e65e5df72e42e6e4e1ffd9358ec2232))
