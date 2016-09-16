@@ -28,6 +28,11 @@ extra-source-files:
     lib/libxls/include/libxls/*.h
     lib/libxls/include/libxls/*.c.h
 
+flag force-has-iconv
+  description: force using iconv library on Windows
+  manual: True
+  default: False
+
 library
   default-language:    Haskell2010
   ghc-options:         -Wall
@@ -36,6 +41,8 @@ library
   -- a configure script if better portability is required.
   -- _GNU_SOURCE is required to enable asprintf in glibc
   cc-options:          -std=gnu99 -D_GNU_SOURCE
+  if flag(force-has-iconv)
+    cc-options:        -DFORCE_HAS_ICONV
 
   hs-source-dirs:      lib
   exposed-modules:     Data.Xls
