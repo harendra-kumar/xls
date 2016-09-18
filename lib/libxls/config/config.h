@@ -4,8 +4,6 @@
 /* Define if you have the iconv() function. */
 #if (!defined(__MINGW32__) && !defined(mingw32_HOST_OS)) || defined (FORCE_HAS_ICONV)
 #define HAVE_ICONV 1
-#else
-#define HAVE_ICONV 0
 #endif
 
 /* Define to the version of this package. */
