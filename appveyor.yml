@@ -1,0 +1,30 @@
+# short paths == fewer problems
+
+clone_folder: "c:\\pkg"
+environment:
+  global:
+    BUILD: "stack"
+    RESOLVER: "lts-6"
+    GHC_OPTIONS: "-O0 -Werror"
+
+    STACK_ROOT: "c:\\sr"
+    #PATH: "c:\\sr"
+    PATH: "%PATH%;%APPDATA%\\local\\bin"
+    CABAL_REINIT_CONFIG: "y"
+
+    #cache:
+  #- "c:\\sr" # stack root
+  #- "%APPDATA%\\local"
+  #- "%APPDATA%\\cabal"
+  #- "%APPDATA%\\ghc"
+
+build: off
+
+before_test:
+- mkdir %APPDATA%\\local\\bin
+- where stack.exe || curl -sSkL -ostack.zip http://www.stackage.org/stack/windows-i386 && 7z x stack.zip stack.exe && move stack.exe %APPDATA%\\local\\bin
+- curl -sSkL -opackage-sanity.sh https://raw.githubusercontent.com/harendra-kumar/package-sanity/windows/package-sanity.sh
+
+test_script:
+- stack setup > nul
+- stack exec bash package-sanity.sh
