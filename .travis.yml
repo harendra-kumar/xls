@@ -27,10 +27,10 @@ matrix:
 
   # stack/linux
   - env: BUILD=stack RESOLVER=lts-6
-    addons: {apt: {packages: [libgmp,libgmp-dev]}}
+    addons: {apt: {packages: [libgmp-dev]}}
 
   - env: BUILD=stack RESOLVER=nightly
-    addons: {apt: {packages: [libgmp,libgmp-dev]}}
+    addons: {apt: {packages: [libgmp-dev]}}
 
   # cabal/stack/osx
   - env: BUILD=cabal RESOLVER=lts-6
