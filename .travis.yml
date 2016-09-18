@@ -48,7 +48,7 @@ script:
   - |
     add_path()  { eval "test -n \"\$$1\"" && eval "PATH=/opt/$2/\"\$$1\"/bin:$PATH"; true; }
     cabal_env() { if test "$BUILD" = cabal; then echo $1; fi; }
-    pkg_sanity() { echo https://raw.githubusercontent.com/harendra-kumar/package-sanity/$1/package-sanity.sh; }
+    pkg_test() { echo https://raw.githubusercontent.com/harendra-kumar/package-test/$1/package-test.sh; }
 
     CURL=$(which curl)
     PATH=/bin:/usr/bin
@@ -65,4 +65,4 @@ script:
       $(cabal_env CABAL_TEST_INSTALL=y)
       $(cabal_env CABAL_NO_SANDBOX=y)
       $(cabal_env CABAL_HACKAGE_MIRROR=hackage.haskell.org:http://hackage.fpcomplete.com)
-      /bin/bash <($CURL -sL $(pkg_sanity a29ed5335e65e5df72e42e6e4e1ffd9358ec2232))
+      /bin/bash <($CURL -sL $(pkg_test 23c3e50a8d55804d60435c946192990ffb856336))

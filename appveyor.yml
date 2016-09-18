@@ -11,6 +11,7 @@ environment:
     LOCAL_BIN: "%APPDATA%\\local\\bin"
     PATH: "%PATH%;%APPDATA%\\local\\bin"
     CABAL_REINIT_CONFIG: "y"
+    PACKAGE_TEST_VER: "23c3e50a8d55804d60435c946192990ffb856336"
 
 cache:
   - "%STACK_ROOT%" # stack root
@@ -24,8 +25,8 @@ build: off
 before_test:
 - if not exist %LOCAL_BIN% mkdir %LOCAL_BIN%
 - where stack.exe || curl -sSkL -ostack.zip http://www.stackage.org/stack/windows-i386 && 7z x stack.zip stack.exe && move stack.exe %LOCAL_BIN%
-- curl -sSkL -opackage-sanity.sh https://raw.githubusercontent.com/harendra-kumar/package-sanity/windows/package-sanity.sh
+- curl -sSkL -opackage-test.sh https://raw.githubusercontent.com/harendra-kumar/package-test/%PACKAGE_TEST_VER%/package-test.sh
 
 test_script:
 - stack setup > nul
-- stack exec bash package-sanity.sh
+- stack exec bash package-test.sh
