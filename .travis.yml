@@ -46,14 +46,15 @@ matrix:
 install: true
 script:
   - |
-    add_path()  { eval "test -n \"\$$1\"" && eval "PATH=/opt/$2/\"\$$1\"/bin:$PATH"; true; }
-    cabal_env() { if test "$BUILD" = cabal; then echo $1; fi; }
-    pkg_test() { echo https://raw.githubusercontent.com/harendra-kumar/package-test/$1/package-test.sh; }
+    set_tool_path()  { eval "test -n \"\$$1\"" && eval "PATH=/opt/$2/\"\$$1\"/bin:$PATH"; true; }
+    when_cabal() { if test "$BUILD" = cabal; then echo $1; fi; }
+    script_url() { echo https://raw.githubusercontent.com/harendra-kumar/package-test/$1/package-test.sh; }
 
     CURL=$(which curl)
     PATH=/bin:/usr/bin
-    add_path GHCVER   ghc
-    add_path CABALVER cabal
+    # Add appropriate ghc and cabal versions from /opt to PATH
+    set_tool_path GHCVER   ghc
+    set_tool_path CABALVER cabal
 
   - env -i
       PATH=$PATH
@@ -62,7 +63,7 @@ script:
       GHCVER=$GHCVER
       CABALVER=$CABALVER
       GHC_OPTIONS="-O0 -Werror"
-      $(cabal_env CABAL_TEST_INSTALL=y)
-      $(cabal_env CABAL_NO_SANDBOX=y)
-      $(cabal_env CABAL_HACKAGE_MIRROR=hackage.haskell.org:http://hackage.fpcomplete.com)
-      /bin/bash <($CURL -sL $(pkg_test 23c3e50a8d55804d60435c946192990ffb856336))
+      $(when_cabal CABAL_TEST_INSTALL=y)
+      $(when_cabal CABAL_NO_SANDBOX=y)
+      $(when_cabal CABAL_HACKAGE_MIRROR=hackage.haskell.org:http://hackage.fpcomplete.com)
+      /bin/bash <($CURL -sL $(script_url 23c3e50a8d55804d60435c946192990ffb856336))
