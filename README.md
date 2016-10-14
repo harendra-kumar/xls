@@ -1,5 +1,6 @@
 ## Haskell xls Parsing
 
+[![Hackage](https://img.shields.io/hackage/v/xls.svg?style=flat)](https://hackage.haskell.org/package/xls)
 [![Build Status](https://travis-ci.org/harendra-kumar/xls.svg?branch=master)](https://travis-ci.org/harendra-kumar/xls)
 [![Build status](https://ci.appveyor.com/api/projects/status/nwknaf0gw1p9vqnv?svg=true)](https://ci.appveyor.com/project/harendra-kumar/xls)
 
@@ -22,9 +23,7 @@ xlsToCSV file =
 ```
 
 An `xls2csv` utility is shipped with the package.
-See the [haddock
-documentation](https://rawgit.com/harendra-kumar/xls/master/doc/index.html)
-for the API details.
+See the haddock documentation for API details.
 
 ## Under the hood
 The library is based on the C library libxls, see
