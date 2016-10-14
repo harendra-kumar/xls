@@ -5,7 +5,8 @@ description:
  Parse Microsoft Excel spreadsheet files in @.xls@ file format
  (extension '.xls') more specifically known as 'BIFF/Excel 97-2004'.
  .
- The library is based on the C library https://sourceforge.net/projects/libxls.
+ The library is based on the C library
+ 'https://sourceforge.net/projects/libxls'.
 
 homepage: http://github.com/harendra-kumar/xls
 license:             BSD3

@@ -31,35 +31,10 @@ The library is based on the C library libxls, see
 [sourceforge](https://sourceforge.net/projects/libxls/) or
 [github](https://github.com/svn2github/libxls).
 
-## Related Stuff
+## See Also
 
-### Haskell
-xlsx format:
-* https://hackage.haskell.org/package/xlsior Streaming Excel (xslx) file generation and parsing
-* https://hackage.haskell.org/package/xlsx Excel xslx file parser/writer
-* https://hackage.haskell.org/package/xlsx-templater create xlsx data files from xlsx templates
-* https://hackage.haskell.org/package/hs-excelx read-only access to Excel 2007 and 2010 documents in XLSX format
-
-Others:
-* https://hackage.haskell.org/package/SpreadsheetML Write support for Excel's SpreadsheetML format
-
-### C
-* https://sourceforge.net/projects/libxls/
-* https://www.gaia-gis.it/fossil/freexl/index Available as debian package too.
-* https://gitlab.com/orcus/orcus C++ XML workbooks
-
-### Java
-* http://poi.apache.org/ Jakarta POI
-
-### Python
-* http://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_excel.html
-
-### JavaScript
-* https://www.npmjs.com/package/excel-parser
-* https://www.npmjs.com/package/xlsx
-
-### Perl
-* ParseExcel
+* [xlsior](https://hackage.haskell.org/package/xlsior): Streaming Excel (xslx) file generation and parsing
+* [xlsx](https://hackage.haskell.org/package/xlsx): Excel xslx file parser/writer
 
 ## Contributing
 Welcome! If you would like to have something changed or added go ahead,
