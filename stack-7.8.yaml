@@ -1,8 +1,0 @@
-flags: {}
-packages:
-- '.'
-extra-deps:
-- base-compat-0.9.1
-- base-orphans-0.5.4
-- getopt-generics-0.13
-resolver: lts-2.22
