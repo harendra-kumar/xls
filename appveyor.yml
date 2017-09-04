@@ -4,14 +4,14 @@ clone_folder: "c:\\pkg"
 environment:
   global:
     BUILD: "stack"
-    RESOLVER: "lts-9.0"
+    RESOLVER: "lts-9.3"
     GHC_OPTIONS: "-O0 -Werror"
 
     STACK_ROOT: "c:\\sr"
     LOCAL_BIN: "%APPDATA%\\local\\bin"
     PATH: "%PATH%;%APPDATA%\\local\\bin"
     CABAL_REINIT_CONFIG: "y"
-    PACKAGE_TEST_VER: "62db8f69afcb47428d1fb87ce4005b453f7f179c"
+    PACKAGE_TEST_VER: "fde043d6c328090883286c69443f3ad2d73ddbb5"
 
 cache:
   - "%STACK_ROOT%" # stack root
