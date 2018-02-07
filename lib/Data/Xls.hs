@@ -85,7 +85,7 @@ instance Exception XlsException
 --
 -- Throws 'XlsException'
 --
-decodeXls :: MonadResource m => FilePath -> Producer m [String]
+decodeXls :: MonadResource m => FilePath -> ConduitM i [String] m ()
 decodeXls file =
     bracketP alloc cleanup decodeWorkSheets
     where
@@ -106,7 +106,7 @@ decodeXls file =
 
 decodeOneWorkSheet
     :: MonadResource m
-    => FilePath -> XLSWorkbook -> CInt -> Producer m [String]
+    => FilePath -> XLSWorkbook -> CInt -> ConduitM i [String] m ()
 decodeOneWorkSheet file pWB index =
     bracketP alloc cleanup decodeWS
     where
@@ -123,7 +123,7 @@ decodeOneWorkSheet file pWB index =
 
         decodeWS = decodeRows
 
-decodeRows :: MonadResource m => XLSWorksheet -> Producer m [String]
+decodeRows :: MonadResource m => XLSWorksheet -> ConduitM i [String] m ()
 decodeRows pWS = do
     rows <- liftIO $ c_xls_ws_rowcount pWS
     cols <- liftIO $ c_xls_ws_colcount pWS
@@ -131,7 +131,7 @@ decodeRows pWS = do
 
 decodeOneRow
     :: MonadResource m
-    => XLSWorksheet -> Int16 -> Int16 -> Producer m [String]
+    => XLSWorksheet -> Int16 -> Int16 -> ConduitM i [String] m ()
 decodeOneRow pWS cols rowindex =
     mapM (liftIO . (c_xls_cell pWS rowindex)) [0 .. cols - 1]
         >>= mapM (liftIO. decodeOneCell)

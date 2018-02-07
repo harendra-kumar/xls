@@ -14,7 +14,8 @@ import           WithCli
 xlsToCSV :: String -> IO ()
 xlsToCSV file =
       runResourceT
+    $ runConduit
     $ decodeXls file
-    $$ CL.mapM_ (liftIO . putStrLn . intercalate ",")
+    .| CL.mapM_ (liftIO . putStrLn . intercalate ",")
 
 main = withCli xlsToCSV
