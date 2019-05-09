@@ -1,30 +1,35 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
- * This file is part of libxls -- A multiplatform, C/C++ library
- * for parsing Excel(TM) files.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- *    1. Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *
- *    2. Redistributions in binary form must reproduce the above copyright notice, this list
- *       of conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY David Hoerl ''AS IS'' AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL David Hoerl OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * Copyright 2004 Komarov Valery
  * Copyright 2006 Christophe Leitienne
- * Copyright 2008-2012 David Hoerl
+ * Copyright 2008-2017 David Hoerl
+ * Copyright 2013 Bob Colbert
+ * Copyright 2013-2018 Evan Miller
+ *
+ * This file is part of libxls -- A multiplatform, C/C++ library for parsing
+ * Excel(TM) files.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *    1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ *    2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ''AS
+ * IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -34,7 +39,7 @@
 #include <ctype.h>
 #include <unistd.h>
 
-#include "libxls/xls.h"
+#include "../include/xls.h"
 
 static char  stringSeparator = '\"';
 static char *lineSeparator = "\n";
@@ -48,7 +53,7 @@ static void Usage(char *progName);
 
 static void Usage(char *progName)
 {
-    fprintf(stderr, "usage: %s <Excel xls file> [-l] [-e encoding] [-t sheet] [-q quote char] [-f field separator]\n", progName);
+    fprintf(stderr, "usage: %s <Excel xls file> [-l] [-v] [-e encoding] [-t sheet] [-q quote char] [-f field separator]\n", progName);
     fprintf(stderr, "  Output Excel file cells as delimited values (default is comma separated)\n");
     fprintf(stderr, "  Options:\n");
     fprintf(stderr, "    -l            : list the sheets contained in the file but do not output their contents.\n");
@@ -56,16 +61,16 @@ static void Usage(char *progName)
     fprintf(stderr, "    -e encoding   : the iconv encoding (default \"%s\")\n", encoding);
     fprintf(stderr, "    -q character  : used to quote strings (default '%c')\n", stringSeparator);
     fprintf(stderr, "    -f string     : used to separate fields (default \"%s\")\n", fieldSeparator);
+    fprintf(stderr, "    -v            : verbose mode\n");
     fprintf(stderr, "\n");
     exit(EXIT_FAILURE);
 }
 
-extern int getopt(int nargc, char * const *nargv, const char *ostr);
-
 int main(int argc, char *argv[]) {
 	xlsWorkBook* pWB;
 	xlsWorkSheet* pWS;
-	unsigned int i;
+    xls_error_t error = LIBXLS_OK;
+	unsigned int i, j;
     int justList = 0;
     char *sheetName = "";
 
@@ -78,7 +83,7 @@ int main(int argc, char *argv[]) {
     optind = 2; // skip file arg
 
     int ch;
-    while ((ch = getopt(argc, argv, "lt:e:q:f:")) != -1) {
+    while ((ch = getopt(argc, argv, "vlt:e:q:f:")) != -1) {
         switch (ch) {
         case 'l':
             justList = 1;
@@ -95,20 +100,20 @@ int main(int argc, char *argv[]) {
         case 'f':
             fieldSeparator = strdup(optarg);
             break;
+        case 'v':
+            xls(1);
+            break;
         default:
             Usage(argv[0]);
             break;
         }
      }
-
-	struct st_row_data* row;
-	WORD cellRow, cellCol;
+printf("FILE: %s\n", argv[1]);
 
 	// open workbook, choose standard conversion
-	pWB = xls_open(argv[1], encoding);
+	pWB = xls_open_file(argv[1], encoding, &error);
 	if (!pWB) {
-		fprintf(stderr, "File not found");
-		fprintf(stderr, "\n");
+        fprintf(stderr, "Error reading XLS file: %s\n", xls_getError(error));
 		return EXIT_FAILURE;
 	}
 
@@ -149,9 +154,10 @@ int main(int argc, char *argv[]) {
 		xls_parseWorkSheet(pWS);
 
 		// process all rows of the sheet
-		for (cellRow = 0; cellRow <= pWS->rows.lastrow; cellRow++) {
+		for (j = 0; j <= (unsigned int)pWS->rows.lastrow; ++j) {
 			int isFirstCol = 1;
-			row = xls_row(pWS, cellRow);
+			WORD cellRow = (WORD)j;
+			//struct st_row_data* row = xls_row(pWS, cellRow);
 
 			// process cells
 			if (!isFirstLine) {
@@ -160,6 +166,7 @@ int main(int argc, char *argv[]) {
 				isFirstLine = 0;
 			}
 
+			WORD cellCol;
 			for (cellCol = 0; cellCol <= pWS->rows.lastcol; cellCol++) {
                 //printf("Processing row=%d col=%d\n", cellRow+1, cellCol+1);
 
@@ -181,9 +188,9 @@ int main(int argc, char *argv[]) {
 				}
 
 				// display the value of the cell (either numeric or string)
-				if (cell->id == 0x27e || cell->id == 0x0BD || cell->id == 0x203) {
+				if (cell->id == XLS_RECORD_RK || cell->id == XLS_RECORD_MULRK || cell->id == XLS_RECORD_NUMBER) {
 					OutputNumber(cell->d);
-				} else if (cell->id == 0x06) {
+				} else if (cell->id == XLS_RECORD_FORMULA || cell->id == XLS_RECORD_FORMULA_ALT) {
                     // formula
 					if (cell->l == 0) // its a number
 					{

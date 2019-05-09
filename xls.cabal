@@ -26,6 +26,7 @@ extra-source-files:
     README.md
     stack.yaml
     lib/libxls/config/*.h
+    lib/libxls/include/*.h
     lib/libxls/include/libxls/*.h
     lib/libxls/include/libxls/*.c.h
 
