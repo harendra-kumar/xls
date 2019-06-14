@@ -26,9 +26,8 @@ An `xls2csv` utility is shipped with the package.
 See the haddock documentation for API details.
 
 ## Under the hood
-The library is based on the C library libxls, see
-[sourceforge](https://sourceforge.net/projects/libxls/) or
-[github](https://github.com/svn2github/libxls).
+The library is based on the C library 
+[libxls](https://github.com/libxls/libxls).
 
 ## See Also
 
