@@ -1,12 +1,12 @@
 name:                xls
-version:             0.1.1
+version:             0.1.2
 synopsis:            Parse Microsoft Excel xls files (BIFF/Excel 97-2004)
 description:
  Parse Microsoft Excel spreadsheet files in @.xls@ file format
  (extension '.xls') more specifically known as 'BIFF/Excel 97-2004'.
  .
  The library is based on the C library
- 'https://sourceforge.net/projects/libxls'.
+ 'https://github.com/libxls/libxls'.
 
 homepage: http://github.com/harendra-kumar/xls
 license:             BSD3

@@ -1,3 +1,7 @@
+## 0.1.2
+
+* Upgrade libxls upstream package version from 1.4.0 to 1.5.1
+
 ## 0.1.1
 
 * Upgrade dependencies
