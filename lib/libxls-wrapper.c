@@ -1,4 +1,4 @@
-#include "libxls/xls.h"
+#include "xls.h"
 
 DWORD xls_wb_sheetcount (xlsWorkBook* pWB) {
     return pWB->sheets.count;
