@@ -19,15 +19,21 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 #endif
 
-module Data.Xls (decodeXls, XlsException(..)) where
+module Data.Xls
+  ( decodeXls
+  , decodeXlsIO
+  , XlsException(..)
+  )
+where
 
-import           Control.Exception            (Exception, throwIO)
+import           Control.Exception            (Exception, throwIO, bracket)
 import           Control.Monad.IO.Class
+import           Control.Monad (when, void)
 import           Control.Monad.Trans.Resource
 import           Data.Conduit                 hiding (Conduit, Sink, Source)
 import           Data.Data
 import           Data.Int
-import           Data.Maybe                   (catMaybes, fromJust, isJust)
+import           Data.Maybe                   (catMaybes, fromJust, isJust, fromMaybe)
 import           Foreign.C
 import           Foreign.Ptr
 import           Text.Printf
@@ -104,6 +110,28 @@ decodeXls file =
             count <- liftIO $ c_xls_wb_sheetcount pWB
             mapM_ (decodeOneWorkSheet file pWB) [0 .. count - 1]
 
+
+-- | Parse a Microsoft excel xls workbook file into a [[[String]]].
+-- Nesting levels means worksheets rows and cells accordingly.
+--
+-- Throws 'XlsException'
+--
+decodeXlsIO
+  :: FilePath
+  -> IO [[[String]]]
+decodeXlsIO file = do
+  file' <- newCString file
+  pWB <- newCString "UTF-8" >>= c_xls_open file'
+  when (pWB == nullPtr) $
+    throwIO $ XlsFileNotFound
+              $ "XLS file " ++ file ++ " not found."
+  count <- liftIO $ c_xls_wb_sheetcount pWB
+  results <- mapM
+    (decodeOneWorkSheetIO file pWB)
+    [0 .. count - 1]
+  void $ c_xls_close_WB pWB
+  return results
+
 decodeOneWorkSheet
     :: MonadResource m
     => FilePath -> XLSWorkbook -> CInt -> ConduitM i [String] m ()
@@ -123,19 +151,57 @@ decodeOneWorkSheet file pWB index =
 
         decodeWS = decodeRows
 
+decodeOneWorkSheetIO
+  :: FilePath
+  -> XLSWorkbook
+  -> CInt
+  -> IO [[String]]
+decodeOneWorkSheetIO file pWB index =
+    bracket alloc cleanup decodeRowsIO
+    where
+        alloc = do
+            pWS <- c_xls_getWorkSheet pWB index
+            if pWS == nullPtr then
+                throwIO $ XlsParseError
+                        $ "XLS file "
+                        ++ file
+                        ++ " could not be parsed."
+            else do
+              c_xls_parseWorkSheet pWS
+              return pWS
+        cleanup = c_xls_close_WS
+
 decodeRows :: MonadResource m => XLSWorksheet -> ConduitM i [String] m ()
 decodeRows pWS = do
     rows <- liftIO $ c_xls_ws_rowcount pWS
     cols <- liftIO $ c_xls_ws_colcount pWS
     mapM_ (decodeOneRow pWS cols) [r | r <- [0 .. rows - 1]]
 
+decodeRowsIO
+  :: XLSWorksheet
+  -> IO [[String]]
+decodeRowsIO pWS = do
+  rows <- c_xls_ws_rowcount pWS
+  cols <- c_xls_ws_colcount pWS
+  mapM (decodeOneRowIO pWS cols) [r | r <- [0 .. rows - 1]]
+
 decodeOneRow
     :: MonadResource m
     => XLSWorksheet -> Int16 -> Int16 -> ConduitM i [String] m ()
 decodeOneRow pWS cols rowindex =
     mapM (liftIO . (c_xls_cell pWS rowindex)) [0 .. cols - 1]
-        >>= mapM (liftIO. decodeOneCell)
+        >>= mapM (liftIO . decodeOneCell)
         >>= yield . catMaybes
+
+decodeOneRowIO
+  :: XLSWorksheet
+  -> Int16
+  -> Int16
+  -> IO [String]
+decodeOneRowIO pWS cols rowindex =
+  mapM (c_xls_cell pWS rowindex) [0 .. cols - 1]
+    >>= mapM decodeOneCell
+    >>= pure . (map $ fromMaybe "")
 
 data CellType = Numerical | Formula | Str | Other
 

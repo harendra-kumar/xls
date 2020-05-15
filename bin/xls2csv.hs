@@ -18,4 +18,5 @@ xlsToCSV file =
     $ decodeXls file
     .| CL.mapM_ (liftIO . putStrLn . intercalate ",")
 
+main :: IO ()
 main = withCli xlsToCSV
