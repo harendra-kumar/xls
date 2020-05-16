@@ -117,20 +117,20 @@ decodeXls file =
 -- Throws 'XlsException'
 --
 decodeXlsIO
-  :: FilePath
-  -> IO [[[String]]]
+    :: FilePath
+    -> IO [[[String]]]
 decodeXlsIO file = do
-  file' <- newCString file
-  pWB <- newCString "UTF-8" >>= c_xls_open file'
-  when (pWB == nullPtr) $
-    throwIO $ XlsFileNotFound
-              $ "XLS file " ++ file ++ " not found."
-  count <- liftIO $ c_xls_wb_sheetcount pWB
-  results <- mapM
-    (decodeOneWorkSheetIO file pWB)
-    [0 .. count - 1]
-  void $ c_xls_close_WB pWB
-  return results
+    file' <- newCString file
+    pWB <- newCString "UTF-8" >>= c_xls_open file'
+    when (pWB == nullPtr) $
+        throwIO $ XlsFileNotFound
+                  $ "XLS file " ++ file ++ " not found."
+    count <- liftIO $ c_xls_wb_sheetcount pWB
+    results <- mapM
+        (decodeOneWorkSheetIO file pWB)
+        [0 .. count - 1]
+    void $ c_xls_close_WB pWB
+    return results
 
 decodeOneWorkSheet
     :: MonadResource m
@@ -152,10 +152,10 @@ decodeOneWorkSheet file pWB index =
         decodeWS = decodeRows
 
 decodeOneWorkSheetIO
-  :: FilePath
-  -> XLSWorkbook
-  -> CInt
-  -> IO [[String]]
+    :: FilePath
+    -> XLSWorkbook
+    -> CInt
+    -> IO [[String]]
 decodeOneWorkSheetIO file pWB index =
     bracket alloc cleanup decodeRowsIO
     where
@@ -194,14 +194,14 @@ decodeOneRow pWS cols rowindex =
         >>= yield . catMaybes
 
 decodeOneRowIO
-  :: XLSWorksheet
-  -> Int16
-  -> Int16
-  -> IO [String]
+    :: XLSWorksheet
+    -> Int16
+    -> Int16
+    -> IO [String]
 decodeOneRowIO pWS cols rowindex =
-  mapM (c_xls_cell pWS rowindex) [0 .. cols - 1]
-    >>= mapM decodeOneCell
-    >>= pure . (map $ fromMaybe "")
+    mapM (c_xls_cell pWS rowindex) [0 .. cols - 1]
+        >>= mapM decodeOneCell
+        >>= pure . (map $ fromMaybe "")
 
 data CellType = Numerical | Formula | Str | Other
 
