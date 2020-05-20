@@ -29,6 +29,7 @@ extra-source-files:
     lib/libxls/include/*.h
     lib/libxls/include/libxls/*.h
     lib/libxls/include/libxls/*.c.h
+    test/data/test.xls
 
 flag force-has-iconv
   description: force using iconv library on Windows
