@@ -1,7 +1,7 @@
 ## Haskell xls Parsing
 
 [![Hackage](https://img.shields.io/hackage/v/xls.svg?style=flat)](https://hackage.haskell.org/package/xls)
-[![Build Status](https://travis-ci.org/harendra-kumar/xls.svg?branch=master)](https://travis-ci.org/harendra-kumar/xls)
+[![Build Status](https://travis-ci.com/harendra-kumar/xls.svg?branch=master)](https://travis-ci.com/harendra-kumar/xls)
 [![Build status](https://ci.appveyor.com/api/projects/status/nwknaf0gw1p9vqnv?svg=true)](https://ci.appveyor.com/project/harendra-kumar/xls)
 
 `xls` is a Haskell library to parse Microsoft Excel spreadsheet files. It
