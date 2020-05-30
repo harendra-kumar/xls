@@ -20,20 +20,20 @@
 #endif
 
 module Data.Xls
-  ( decodeXls
-  , decodeXlsIO
-  , XlsException(..)
-  )
+    ( decodeXls
+    , decodeXlsIO
+    , XlsException(..)
+    )
 where
 
-import           Control.Exception            (Exception, throwIO, bracket)
+import           Control.Exception (Exception, throwIO, bracket)
 import           Control.Monad.IO.Class
 import           Control.Monad (when, void)
 import           Control.Monad.Trans.Resource
-import           Data.Conduit                 hiding (Conduit, Sink, Source)
+import           Data.Conduit hiding (Conduit, Sink, Source)
 import           Data.Data
 import           Data.Int
-import           Data.Maybe                   (catMaybes, fromJust, isJust, fromMaybe)
+import           Data.Maybe (catMaybes, fromJust, isJust, fromMaybe)
 import           Foreign.C
 import           Foreign.Ptr
 import           Text.Printf
@@ -86,8 +86,9 @@ instance Exception XlsException
 -- rows in a worksheet. Each row represented by a list of Strings, each String
 -- representing an individual cell.
 --
--- Currently there is no separation of worksheets, all worksheets in a
--- workbook get concatenated.
+-- Important Note: This API concatenates rows from all worksheets into a single
+-- stream. Please use the non-streaming 'decodeXlsIO' API to get individual
+-- worksheets.
 --
 -- Throws 'XlsException'
 --
@@ -112,7 +113,7 @@ decodeXls file =
 
 
 -- | Parse a Microsoft excel xls workbook file into a [[[String]]].
--- Nesting levels means worksheets rows and cells accordingly.
+-- Nesting levels mean worksheets, rows and cells respectively.
 --
 -- Throws 'XlsException'
 --
@@ -124,11 +125,9 @@ decodeXlsIO file = do
     pWB <- newCString "UTF-8" >>= c_xls_open file'
     when (pWB == nullPtr) $
         throwIO $ XlsFileNotFound
-                  $ "XLS file " ++ file ++ " not found."
+                $ "XLS file " ++ file ++ " not found."
     count <- liftIO $ c_xls_wb_sheetcount pWB
-    results <- mapM
-        (decodeOneWorkSheetIO file pWB)
-        [0 .. count - 1]
+    results <- mapM (decodeOneWorkSheetIO file pWB) [0 .. count - 1]
     void $ c_xls_close_WB pWB
     return results
 
@@ -178,12 +177,12 @@ decodeRows pWS = do
     mapM_ (decodeOneRow pWS cols) [r | r <- [0 .. rows - 1]]
 
 decodeRowsIO
-  :: XLSWorksheet
-  -> IO [[String]]
+    :: XLSWorksheet
+    -> IO [[String]]
 decodeRowsIO pWS = do
-  rows <- c_xls_ws_rowcount pWS
-  cols <- c_xls_ws_colcount pWS
-  mapM (decodeOneRowIO pWS cols) [r | r <- [0 .. rows - 1]]
+    rows <- c_xls_ws_rowcount pWS
+    cols <- c_xls_ws_colcount pWS
+    mapM (decodeOneRowIO pWS cols) [r | r <- [0 .. rows - 1]]
 
 decodeOneRow
     :: MonadResource m
