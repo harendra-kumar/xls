@@ -20,8 +20,8 @@
 #endif
 
 module Data.Xls
-    ( decodeXls
-    , decodeXlsIO
+    ( decodeXlsIO
+    , decodeXls
     , XlsException(..)
     )
 where
@@ -112,8 +112,9 @@ decodeXls file =
             mapM_ (decodeOneWorkSheet file pWB) [0 .. count - 1]
 
 
--- | Parse a Microsoft excel xls workbook file into a [[[String]]].
--- Nesting levels mean worksheets, rows and cells respectively.
+-- | Parse a Microsoft excel xls workbook file into a list of worksheets, each
+-- worksheet consists of a list of rows and each row consists of a list of
+-- cells.  Cells are plain 'String'.
 --
 -- Throws 'XlsException'
 --

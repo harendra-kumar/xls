@@ -11,15 +11,17 @@ parses the xls file format (extension `.xls`) more specifically known as
 It can be useful for mining data from old Microsoft Excel spreadsheets.
 
 ## API
-Use `decodeXls` to get a streaming Conduit. For example to convert an
-xls file to comma separated csv:
+Use `decodeXlsIO` to get a list of all worksheets. For example to convert all
+worksheets in an xls file to comma separated csv:
 
 ```haskell
+import Data.List (intercalate)
+import Data.Xls (decodeXlsIO)
+
 xlsToCSV :: String -> IO ()
-xlsToCSV file =
-      runResourceT
-    $ decodeXls file
-    $$ CL.mapM_ (liftIO . putStrLn . intercalate ",")
+xlsToCSV file = do
+    worksheets <- decodeXlsIO file
+    mapM_ (mapM_ (putStrLn . intercalate ",")) worksheets
 ```
 
 An `xls2csv` utility is shipped with the package.
