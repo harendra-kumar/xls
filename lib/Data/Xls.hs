@@ -37,15 +37,15 @@ import           Data.Conduit hiding (Conduit, Sink, Source)
 import           Data.Data
 import           Data.Int
 import           Data.Word (Word32)
-import           Data.Maybe (catMaybes, fromJust, isJust, fromMaybe)
+import           Data.Maybe (catMaybes, fromJust, isJust)
 import           Data.ByteString (hPut)
 import           Data.ByteString.Internal (ByteString(..))
+import           Data.XlsCell (CellF(..),Cell,cellToString)
 import           Foreign.C
 import           Foreign.Ptr
 import           Foreign.ForeignPtr (withForeignPtr)
 import           Foreign.Storable (Storable(..))
 import           Foreign.Marshal.Alloc (malloc)
-import           Text.Printf
 import           System.IO.Temp (withSystemTempFile)
 
 #define CCALL(name,signature) \
@@ -166,14 +166,14 @@ decodeXls file =
 -- since this lib is lacking a pure function to decode the contents 
 -- of an XLS file. 
 -- Due to Erik Rybakken. 
-decodeXlsByteString :: ByteString -> IO [[[String]]]
+decodeXlsByteString :: ByteString -> IO [[[Cell]]]
 decodeXlsByteString content = withSystemTempFile "decodeXlsByteString"
     $ \filePath h -> do
         hPut h content
         decodeXlsIO filePath
 
 -- | Experimental: This function uses the @xls_open_buffer@ function of libxls.
-decodeXlsByteString' :: ByteString -> IO (Either XLSError [[[String]]])
+decodeXlsByteString' :: ByteString -> IO (Either XLSError [[[Cell]]])
 decodeXlsByteString' bs = do
     (buf,buflen) <- toCBuffer bs
     enc <- newCString "UTF-8"
@@ -192,7 +192,7 @@ decodeXlsByteString' bs = do
 --
 decodeXlsIO
     :: FilePath
-    -> IO [[[String]]]
+    -> IO [[[Cell]]]
 decodeXlsIO file = do
     file' <- newCString file
     pWB <- newCString "UTF-8" >>= c_xls_open file'
@@ -206,7 +206,7 @@ decodeXlsIO file = do
                 "XLS file " ++ file ++ " could not be parsed."
 
 -- helper function for decoding both file and buffer
-decodeXLSWorkbook :: Maybe FilePath -> XLSWorkbook -> IO (Either XLSError [[[String]]])
+decodeXLSWorkbook :: Maybe FilePath -> XLSWorkbook -> IO (Either XLSError [[[Cell]]])
 decodeXLSWorkbook mFile pWB = if pWB == nullPtr
     then return (Left LIBXLS_ERROR_OPEN)
     else catchXls $ do 
@@ -239,7 +239,7 @@ decodeOneWorkSheetIO
     :: FilePath
     -> XLSWorkbook
     -> CInt
-    -> IO [[String]]
+    -> IO [[Cell]]
 decodeOneWorkSheetIO file pWB index =
     bracket alloc cleanup decodeRowsIO
     where
@@ -263,7 +263,7 @@ decodeRows pWS = do
 
 decodeRowsIO
     :: XLSWorksheet
-    -> IO [[String]]
+    -> IO [[Cell]]
 decodeRowsIO pWS = do
     rows <- c_xls_ws_rowcount pWS
     cols <- c_xls_ws_colcount pWS
@@ -281,22 +281,27 @@ decodeOneRowIO
     :: XLSWorksheet
     -> Int16
     -> Int16
-    -> IO [String]
+    -> IO [Cell]
 decodeOneRowIO pWS cols rowindex =
     mapM (c_xls_cell pWS rowindex) [0 .. cols - 1]
-        >>= mapM decodeOneCell
-        >>= pure . (map $ fromMaybe "")
+        >>= mapM decodeOneCell'
 
 data CellType = Numerical | Formula | Str | Other
 
 decodeOneCell :: XLSCell -> IO (Maybe String)
-decodeOneCell cellPtr = do
+decodeOneCell = fmap maybeString . decodeOneCell' where
+    maybeString (OtherCell _) = Nothing
+    maybeString c = Just (cellToString c)
+
+decodeOneCell' :: XLSCell -> IO Cell
+decodeOneCell' cellPtr = do
     nil <- isNullCell cellPtr
     if nil then
-        return Nothing
-    else cellValue cellPtr >>= return . Just
+        return (OtherCell ())
+    else cellValue cellPtr
 
     where
+        emptyCell = OtherCell ()
         isNullCell ptr =
             if ptr == nullPtr then
                 return True
@@ -321,21 +326,19 @@ decodeOneCell cellPtr = do
                     return Nothing
 
             return $ case cellType typ ftype strval of
-                Numerical   -> outputNum numval
+                Numerical   -> let (CDouble d) = numval in NumericalCell d
                 Formula     -> decodeFormula strval numval
-                Str         -> fromJust strval
-                Other       -> "" -- we don't decode anything else
+                Str         -> (TextCell . fromJust) strval
+                Other       -> emptyCell -- we don't decode anything else
 
         decodeFormula str numval =
             case str of
                 Just "bool"  -> outputBool numval
-                Just "error" -> "*error*"
-                Just x       -> x
-                Nothing      -> "" -- is it possible?
+                Just "error" -> TextCell "*error*"
+                Just x       -> TextCell x
+                Nothing      -> emptyCell -- is it possible?
 
-        outputNum  d = printf "%.15g" (uncurry encodeFloat (decodeFloat d)
-                                       :: Double)
-        outputBool d = if d == 0 then "false" else "true"
+        outputBool d = BoolCell (if d == 0 then False else True)
 
         cellType t ftype strval =
             if t == 0x27e || t == 0x0BD || t == 0x203 then
