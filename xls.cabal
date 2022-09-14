@@ -1,5 +1,5 @@
 name:                xls
-version:             0.1.3
+version:             0.1.4
 synopsis:            Parse Microsoft Excel xls files (BIFF/Excel 97-2004)
 description:
  Parse Microsoft Excel spreadsheet files in @.xls@ file format
@@ -50,9 +50,11 @@ library
   hs-source-dirs:      lib
   exposed-modules:     Data.Xls
   build-depends:       base         >= 4.7   && < 5
+                     , bytestring   >= 0.10
                      , conduit      >= 1.1   && < 1.4
                      , filepath     >= 1.0   && < 1.5
                      , resourcet    >= 0.3   && < 1.3
+                     , temporary
                      , transformers >= 0.1   && < 0.6
 
   c-sources:           lib/libxls-wrapper.c,
