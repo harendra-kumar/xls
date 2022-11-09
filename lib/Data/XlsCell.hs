@@ -19,7 +19,7 @@ data CellF o = NumericalCell Double
     | TextCell String
     | BoolCell Bool 
     | OtherCell o
-    deriving (Functor)
+    deriving (Functor,Show,Eq)
 instance IsString (CellF o) where
     fromString = TextCell
 
