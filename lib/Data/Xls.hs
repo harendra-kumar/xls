@@ -20,7 +20,12 @@
 #endif
 
 module Data.Xls
-    ( decodeXlsIO
+    ( -- * Cell data type
+      CellF(..)
+    , Cell
+    , cellToString
+      -- * decoding Xls files
+    , decodeXlsIO
     , decodeXlsByteString
     , decodeXlsByteString'
     , decodeXls
@@ -162,9 +167,9 @@ decodeXls file =
             count <- liftIO $ c_xls_wb_sheetcount pWB
             mapM_ (decodeOneWorkSheet file pWB) [0 .. count - 1]
 
--- | A work-around via temporary files and 'decodeXlsIO', 
--- since this lib is lacking a pure function to decode the contents 
--- of an XLS file. 
+-- | A work-around via temporary files and 'decodeXlsIO'.
+-- Since this library lacks a pure function to decode from a buffer, 
+-- we just write the buffer to a temporary file and decode the file. 
 -- Due to Erik Rybakken. 
 decodeXlsByteString :: ByteString -> IO [[[Cell]]]
 decodeXlsByteString content = withSystemTempFile "decodeXlsByteString"
