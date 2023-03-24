@@ -7,5 +7,8 @@ main = hspec $ describe "Sanity check" $ do
         content <- decodeXlsIO "test/data/test.xls"
         content `shouldBe` testFileContent
 
-testFileContent :: [[[String]]]
-testFileContent = [[["1.000000000000000","2.3","text"]],[["1.000000000000000","2.3","text"]]]
+testFileContent :: [[[Cell]]]
+testFileContent = [
+    [[NumericalCell 1.0,TextCell "2.3",TextCell "text"]],
+    [[NumericalCell 1.0,TextCell "2.3",TextCell "text"]]
+    ]

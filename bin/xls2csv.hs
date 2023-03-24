@@ -2,7 +2,7 @@
 -- stack --resolver lts runhaskell --package getopt-generics
 
 import Data.List (intercalate)
-import Data.Xls (decodeXlsIO)
+import Data.Xls (decodeXlsIO,cellToString)
 import WithCli (withCli)
 
 -- TODO need to escape the separator and the escaping quotes themselves
@@ -10,7 +10,7 @@ import WithCli (withCli)
 xlsToCSV :: String -> IO ()
 xlsToCSV file = do
     worksheets <- decodeXlsIO file
-    mapM_ (mapM_ (putStrLn . intercalate ",")) worksheets
+    mapM_ (mapM_ (putStrLn . intercalate "," . fmap cellToString)) worksheets
 
 main :: IO ()
 main = withCli xlsToCSV

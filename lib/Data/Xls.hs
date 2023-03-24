@@ -20,23 +20,38 @@
 #endif
 
 module Data.Xls
-    ( decodeXlsIO
+    ( -- * Cell data type
+      CellF(..)
+    , Cell
+    , cellToString
+      -- * decoding Xls files
+    , decodeXlsIO
+    , decodeXlsByteString
+    , decodeXlsByteString'
     , decodeXls
     , XlsException(..)
+    , XLSError(..)
     )
 where
 
-import           Control.Exception (Exception, throwIO, bracket)
+import           Control.Exception (Exception, throwIO, bracket, catch)
 import           Control.Monad.IO.Class
-import           Control.Monad (when, void)
+import           Control.Monad (void)
 import           Control.Monad.Trans.Resource
 import           Data.Conduit hiding (Conduit, Sink, Source)
 import           Data.Data
 import           Data.Int
-import           Data.Maybe (catMaybes, fromJust, isJust, fromMaybe)
+import           Data.Word (Word32)
+import           Data.Maybe (catMaybes, fromJust, isJust)
+import           Data.ByteString (hPut)
+import           Data.ByteString.Internal (ByteString(..))
+import           Data.XlsCell (CellF(..),Cell,cellToString)
 import           Foreign.C
 import           Foreign.Ptr
-import           Text.Printf
+import           Foreign.ForeignPtr (withForeignPtr)
+import           Foreign.Storable (Storable(..))
+import           Foreign.Marshal.Alloc (malloc)
+import           System.IO.Temp (withSystemTempFile)
 
 #define CCALL(name,signature) \
 foreign import ccall unsafe #name \
@@ -44,9 +59,45 @@ foreign import ccall unsafe #name \
 
 -- Workbook accessor functions
 data XLSWorkbookStruct
+-- | An enum returned by libxls. See libxls\/include\/xls.h
+data XLSError = LIBXLS_OK 
+    | LIBXLS_ERROR_OPEN 
+    | LIBXLS_ERROR_SEEK 
+    | LIBXLS_ERROR_READ 
+    | LIBXLS_ERROR_PARSE 
+    | LIBXLS_ERROR_MALLOC
+    deriving (Show,Eq,Enum)
+instance Storable XLSError where
+    sizeOf = const (sizeOf (0 :: Word32)) -- TODO: sizeof enum is compiler and architecture dependent!
+    alignment = sizeOf -- okay for simple Storables
+    peek = fmap (toEnum . (fromIntegral :: Word32 -> Int)) . peek . castPtr
+    poke ptr e = poke (castPtr ptr) ((fromIntegral :: Int -> Word32).fromEnum $ e)
+instance Exception XLSError where
+
 type XLSWorkbook = Ptr XLSWorkbookStruct
+type XLSErrorT = Ptr XLSError
+type CBuffer = Ptr CUChar
+
+-- | Recall that
+-- @
+-- ByteString ~ (ForeignPtr Char8,Int)
+--     CUChar ~ Word8
+--      CSize ~ Word64
+-- @
+--
+-- So we need to marshal
+-- 
+-- @
+-- (ForeignPtr Char8) -> Ptr CUChar
+-- Int -> CSize
+-- @
+toCBuffer :: ByteString -> IO (CBuffer,CSize)
+toCBuffer (PS fPtr offset ilen) = do
+    withForeignPtr fPtr $ \ptrData -> do
+        return (plusPtr (castPtr ptrData) offset,CSize (fromIntegral ilen))
 
 CCALL(xls_open,          CString -> CString -> IO XLSWorkbook)
+CCALL(xls_open_buffer,   CBuffer -> CSize -> CString -> XLSErrorT -> IO XLSWorkbook)
 CCALL(xls_wb_sheetcount, XLSWorkbook -> IO CInt -- Int32)
 CCALL(xls_close_WB,      XLSWorkbook -> IO ())
 
@@ -82,6 +133,13 @@ data XlsException =
 
 instance Exception XlsException
 
+exceptionLeft :: XlsException -> Either XLSError a
+exceptionLeft (XlsFileNotFound _) = Left LIBXLS_ERROR_OPEN
+exceptionLeft (XlsParseError   _) = Left LIBXLS_ERROR_PARSE
+
+catchXls :: IO a -> IO (Either XLSError a)
+catchXls = flip catch (return.exceptionLeft) . fmap Right 
+
 -- | Parse a Microsoft excel xls workbook file into a Conduit yielding
 -- rows in a worksheet. Each row represented by a list of Strings, each String
 -- representing an individual cell.
@@ -111,6 +169,27 @@ decodeXls file =
             count <- liftIO $ c_xls_wb_sheetcount pWB
             mapM_ (decodeOneWorkSheet file pWB) [0 .. count - 1]
 
+-- | A work-around via temporary files and 'decodeXlsIO'.
+-- Since this library lacks a pure function to decode from a buffer, 
+-- we just write the buffer to a temporary file and decode the file. 
+-- Due to Erik Rybakken. 
+decodeXlsByteString :: ByteString -> IO [[[Cell]]]
+decodeXlsByteString content = withSystemTempFile "decodeXlsByteString"
+    $ \filePath h -> do
+        hPut h content
+        decodeXlsIO filePath
+
+-- | Experimental: This function uses the @xls_open_buffer@ function of libxls.
+decodeXlsByteString' :: ByteString -> IO (Either XLSError [[[Cell]]])
+decodeXlsByteString' bs = do
+    (buf,buflen) <- toCBuffer bs
+    enc <- newCString "UTF-8"
+    outError <- malloc
+    wb <- c_xls_open_buffer buf buflen enc outError
+    e <- peek outError
+    case e of
+        LIBXLS_OK -> decodeXLSWorkbook Nothing wb
+        _         -> return (Left e) 
 
 -- | Parse a Microsoft excel xls workbook file into a list of worksheets, each
 -- worksheet consists of a list of rows and each row consists of a list of
@@ -120,17 +199,29 @@ decodeXls file =
 --
 decodeXlsIO
     :: FilePath
-    -> IO [[[String]]]
+    -> IO [[[Cell]]]
 decodeXlsIO file = do
     file' <- newCString file
     pWB <- newCString "UTF-8" >>= c_xls_open file'
-    when (pWB == nullPtr) $
-        throwIO $ XlsFileNotFound
-                $ "XLS file " ++ file ++ " not found."
-    count <- liftIO $ c_xls_wb_sheetcount pWB
-    results <- mapM (decodeOneWorkSheetIO file pWB) [0 .. count - 1]
-    void $ c_xls_close_WB pWB
-    return results
+    parseResult <- decodeXLSWorkbook (Just file) pWB
+    case parseResult of
+        Right results -> return results
+        Left  e -> case e of
+            LIBXLS_ERROR_OPEN -> throwIO $ XlsFileNotFound $ 
+                "XLS file " ++ file ++ " not found."
+            _                 -> throwIO $ XlsParseError $ 
+                "XLS file " ++ file ++ " could not be parsed."
+
+-- helper function for decoding both file and buffer
+decodeXLSWorkbook :: Maybe FilePath -> XLSWorkbook -> IO (Either XLSError [[[Cell]]])
+decodeXLSWorkbook mFile pWB = if pWB == nullPtr
+    then return (Left LIBXLS_ERROR_OPEN)
+    else catchXls $ do 
+        count <- liftIO $ c_xls_wb_sheetcount pWB
+        results <- mapM (decodeOneWorkSheetIO (maybe "buffer" id mFile) pWB) [0 .. count - 1]
+        void $ c_xls_close_WB pWB
+        return results
+    
 
 decodeOneWorkSheet
     :: MonadResource m
@@ -155,7 +246,7 @@ decodeOneWorkSheetIO
     :: FilePath
     -> XLSWorkbook
     -> CInt
-    -> IO [[String]]
+    -> IO [[Cell]]
 decodeOneWorkSheetIO file pWB index =
     bracket alloc cleanup decodeRowsIO
     where
@@ -179,7 +270,7 @@ decodeRows pWS = do
 
 decodeRowsIO
     :: XLSWorksheet
-    -> IO [[String]]
+    -> IO [[Cell]]
 decodeRowsIO pWS = do
     rows <- c_xls_ws_rowcount pWS
     cols <- c_xls_ws_colcount pWS
@@ -197,22 +288,27 @@ decodeOneRowIO
     :: XLSWorksheet
     -> Int16
     -> Int16
-    -> IO [String]
+    -> IO [Cell]
 decodeOneRowIO pWS cols rowindex =
     mapM (c_xls_cell pWS rowindex) [0 .. cols - 1]
-        >>= mapM decodeOneCell
-        >>= pure . (map $ fromMaybe "")
+        >>= mapM decodeOneCell'
 
 data CellType = Numerical | Formula | Str | Other
 
 decodeOneCell :: XLSCell -> IO (Maybe String)
-decodeOneCell cellPtr = do
+decodeOneCell = fmap maybeString . decodeOneCell' where
+    maybeString (OtherCell _) = Nothing
+    maybeString c = Just (cellToString c)
+
+decodeOneCell' :: XLSCell -> IO Cell
+decodeOneCell' cellPtr = do
     nil <- isNullCell cellPtr
     if nil then
-        return Nothing
-    else cellValue cellPtr >>= return . Just
+        return (OtherCell ())
+    else cellValue cellPtr
 
     where
+        emptyCell = OtherCell ()
         isNullCell ptr =
             if ptr == nullPtr then
                 return True
@@ -237,21 +333,19 @@ decodeOneCell cellPtr = do
                     return Nothing
 
             return $ case cellType typ ftype strval of
-                Numerical   -> outputNum numval
+                Numerical   -> let (CDouble d) = numval in NumericalCell d
                 Formula     -> decodeFormula strval numval
-                Str         -> fromJust strval
-                Other       -> "" -- we don't decode anything else
+                Str         -> (TextCell . fromJust) strval
+                Other       -> emptyCell -- we don't decode anything else
 
         decodeFormula str numval =
             case str of
                 Just "bool"  -> outputBool numval
-                Just "error" -> "*error*"
-                Just x       -> x
-                Nothing      -> "" -- is it possible?
+                Just "error" -> TextCell "*error*"
+                Just x       -> TextCell x
+                Nothing      -> emptyCell -- is it possible?
 
-        outputNum  d = printf "%.15g" (uncurry encodeFloat (decodeFloat d)
-                                       :: Double)
-        outputBool d = if d == 0 then "false" else "true"
+        outputBool d = BoolCell (if d == 0 then False else True)
 
         cellType t ftype strval =
             if t == 0x27e || t == 0x0BD || t == 0x203 then
