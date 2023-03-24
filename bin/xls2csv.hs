@@ -2,8 +2,7 @@
 -- stack --resolver lts runhaskell --package getopt-generics
 
 import Data.List (intercalate)
-import Data.Xls (decodeXlsIO)
-import Data.XlsCell (cellToString)
+import Data.Xls (decodeXlsIO,cellToString)
 import WithCli (withCli)
 
 -- TODO need to escape the separator and the escaping quotes themselves
