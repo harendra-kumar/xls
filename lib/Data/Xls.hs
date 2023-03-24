@@ -72,6 +72,8 @@ instance Storable XLSError where
     alignment = sizeOf -- okay for simple Storables
     peek = fmap (toEnum . (fromIntegral :: Word32 -> Int)) . peek . castPtr
     poke ptr e = poke (castPtr ptr) ((fromIntegral :: Int -> Word32).fromEnum $ e)
+instance Exception XLSError where
+
 type XLSWorkbook = Ptr XLSWorkbookStruct
 type XLSErrorT = Ptr XLSError
 type CBuffer = Ptr CUChar
