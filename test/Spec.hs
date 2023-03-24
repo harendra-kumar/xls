@@ -1,5 +1,4 @@
 import           Data.Xls
-import           Data.XlsCell (CellF(..),Cell)
 import           Test.Hspec
 
 main :: IO ()
