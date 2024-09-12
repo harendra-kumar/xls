@@ -51,7 +51,7 @@ library
   exposed-modules:     Data.Xls
   build-depends:       base         >= 4.7   && < 5
                      , conduit      >= 1.1   && < 1.4
-                     , filepath     >= 1.0   && < 1.5
+                     , filepath     >= 1.0   && < 1.6
                      , resourcet    >= 0.3   && < 1.4
                      , transformers >= 0.1   && < 0.7
 
